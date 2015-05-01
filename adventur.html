@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<title>SONIC'S &nbsp;ADVENTURE 1.5</title>
+<link rel="stylesheet" href="vgafont/vgafontface.css" />
+<style>
+body {
+    background-color: black;
+}
+
+div#game {
+    width: 100%;
+    height: 25em;
+    overflow: auto;
+    font-family: 'more_perfect_dos_vgaregular',monospace;
+    color: #fcfcfc;
+}
+
+span.black         { color: #000000; }
+span.blue          { color: #0000a8; }
+span.green         { color: #00a800; }
+span.cyan          { color: #00a8a8; }
+span.red           { color: #a80000; }
+span.magenta       { color: #a800a8; }
+span.brown         { color: #984203; }
+span.light-grey    { color: #a8a8a8; }
+span.dark-grey     { color: #545454; }
+span.light-blue    { color: #5454fc; }
+span.light-green   { color: #54fc54; }
+span.light-cyan    { color: #54fcfc; }
+span.light-red     { color: #fc5454; }
+span.light-magenta { color: #fc54fc; }
+span.yellow        { color: #fcfc54; }
+span.white         { color: #fcfcfc; }
+</style>
+</head>
+<body>
+
+<div id="game"></div>
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+
+var curcolor = 'white';
+var globalstate = 'start';
+var querymap = {};
+var user_input = "";
+var user_input_span;
+
+function print(txt) {
+    var bare_span = document.createElement("span");
+    $("#game").append($(bare_span).attr("class", curcolor).html(txt.replace(/\n/g, "<br />\n")));
+}
+
+function clear_screen() {
+    $("#game").html("");
+}
+
+function set_state(nextstate) {
+    return function () {
+        globalstate = nextstate;
+    };
+}
+
+function color(colorname) {
+    return function () {
+        curcolor = colorname;
+    };
+}
+
+function update_user_input(show_cursor) {
+    var show = user_input;
+    if (show_cursor) {
+        show += "_";
+    }
+    user_input_span.html(show);
+    user_input_span[0].scrollIntoView();
+}
+
+function query(qmap) {
+    return function () {
+        querymap = qmap;
+        user_input_span = $(document.createElement("span")).attr("class", curcolor);
+        $("#game").append(user_input_span);
+        update_user_input(true);
+    };
+}
+
+function quit() {
+    window.location = "http://jtolds.com/";
+    querymap = {"dummy": "stop"};
+}
+
+function run_state(statedef) {
+    if (statedef instanceof Array) {
+        $.each(statedef, function (i, obj) { run_state(obj); });
+    }
+    else if (typeof statedef === "string") {
+        print(statedef);
+    }
+    else {
+        statedef();
+    }
+}
+
+function run_state_named(name) {
+    var thestate = states[name];
+    if (thestate == undefined) {
+        throw new Error("undefined state " + name);
+    }
+    return run_state(thestate);
+}
+
+states = {
+    start: [
+        clear_screen,
+        "\n",
+        set_state('intro')],
+
+    intro: [
+        color('blue'),
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+        "SONIC'S &nbsp;ADVENTURE 1.5\n\n",
+        "Welcome to Sonic's adventure game.\n",
+        color('brown'),
+        "In this program you will try to save Tails, Sonic's friend.\n",
+        set_state('mainmenu')],
+
+    mainmenu: [
+        color('light-green'),
+        "\n",
+        "Would you like to read the story(1), play now(2), read instuctions(3),\n",
+        "quit(4), or restart and clear screen(5) &gt;",
+        query({1: 'story', 2: 'play', 3: 'instructions', 4: 'done', other: 'start'})],
+
+    story: [
+        clear_screen,
+        color('light-red'),
+        "A long time ago...\n\n",
+        "Sonic was running along with Tails flying behind him at super sonic speed. \n",
+        "Robotnik was hiding in a tree with his hovercraft noticing that Sonic was\n",
+        "ahead and Sonic wouldn't see him (Robotnik) steal Tails if he did. So, \n",
+        "Robotnik came up and stole Tails with his hovercraft. Sonic noticed that\n",
+        "Tails was missing and so he chased Robotnik.\n\n",
+        "Now it is up to you...\n",
+        set_state('mainmenu')],
+
+    instructions: [
+        color('light-blue'),
+        "The instructions are easy. You need to decide what to do to save Tails. It's\n",
+        "like a normal adventure game (without the pictures).\n",
+        set_state('mainmenu')],
+
+    gameover: [
+        color('white'),
+        "GAME OVER\n\n",
+        set_state('intro')],
+
+    done: [
+        color('white'),
+        "DONE\n",
+        quit],
+
+    play: [
+        color('red'),
+        "You are following Robotnik. Should you keep up the chase until something\n",
+        "happens(1), try to knock the hovercraft's engine off(2), or stop and take a\n",
+        "breath(3) &gt;",
+        query({1: 'm1', 2: 'm2', other: 'gameover'})],
+
+    m1: [
+        color('blue'),
+        "You follow Robotnik. He flys into an ocean. Then he flys into an under-ground\n",
+        "cave. You drown.\n\n",
+        set_state('gameover')],
+
+    m2: [
+        color('green'),
+        "You knock off the engines. Robotnik flees with Tails in his grasp. He runs to\n",
+        "his escape vehicle and flys away.\n\n",
+        color('cyan'),
+        "Robotnik flew away. Should you go try and find him in his hidout(1), give\n",
+        "up(2), or go to where Robotnik originally stole Tails(3) &gt;",
+        query({1: 'm2_1', 2: 'gameover', other: 'm2_3'})],
+
+    m2_3: [
+        color('red'),
+        "Robotnik isn't there.\n\n",
+        set_state('gameover')],
+
+    m2_1: [
+        color('magenta'),
+        "You find Robotnik. Should you wreak havoc(1), screem in terror(2), or go and\n",
+        "try to rescue Tails(3) &gt;",
+        query({1: 'm2_1_1', 2: 'm2_1_2', other: 'm2_1_3'})],
+
+    m2_1_1: [
+        color('brown'),
+        "Good choice, but there are to many guards in Robotnik's hideout.\n\n",
+        set_state('gameover')],
+
+    m2_1_2: [
+        color('light-grey'),
+        "Robotnik finds and captures you.\n\n",
+        set_state('gameover')],
+
+    m2_1_3: [
+        color('light-blue'),
+        "You find Tails. Robotnik finds you. Robotnik takes Tails and gets away. Now\n",
+        "should you chase Robotnik(1), go draw cartoons at home(2), or wait 'till\n",
+        "Robotnik gets back(3) &gt;",
+        query({1: 'm2_1_3_1', 2: 'm2_1_3_2', other: 'm2_1_3_3'})],
+
+    m2_1_3_2: [
+        color('light-blue'),
+        "Duhh! In other words, YOU JUST GAVE UP!\n\n",
+        set_state('gameover')],
+
+    m2_1_3_3: [
+        color('light-blue'),
+        "Sorry, Robotnik's guards find you.\n\n",
+        set_state('gameover')],
+
+    m2_1_3_1: [
+        color('light-green'),
+        "You are following Robotnik. Robotnik hasn't seen you. Should you jump in and\n",
+        "bust his hovercraft(1), re-knock off his engines(2), or follow him until\n",
+        "something happens(3) &gt;",
+        query({1: 'm2_1_3_1_1', 2: 'm2', other: 'm2_1'})],
+
+    m2_1_3_1_1: [
+        color('light-cyan'),
+        "You bust the hovercraft. Robotnik escapes once more. Should you go back to his\n",
+        "hideout(1), find something to eat(2), or wait to see if Robotnik comes\n",
+        "back(3) &gt;",
+        query({1: 'm2_1_3_1_1_1', 2: 'm2_1_3_1_1_2', other: 'm2_1_3_1_1_3'})],
+
+    m2_1_3_1_1_2: [
+        color('light-cyan'),
+        "The food you ate was a Robotnik trap. Sorry.\n\n",
+        set_state('gameover')],
+
+    m2_1_3_1_1_3: [
+        color('light-cyan'),
+        "Robotnik doesn't come back.\n\n",
+        set_state('gameover')],
+
+    m2_1_3_1_1_1: [
+        color('red'),
+        "You go back to the hideout. Metal Sonic is waiting for you. He jumps at you.\n",
+        "Should you run closer(1), run away(2), or jump(3) &gt;",
+        query({1: 'm2_1_3_1_1_1_1', 2: 'm2_1_3_1_1_1_2', other: 'win'})],
+
+    m2_1_3_1_1_1_1: [
+        color('light-magenta'),
+        " = He lands on you.\n\n",
+        set_state('gameover')],
+
+    m2_1_3_1_1_1_2: [
+        color('yellow'),
+        "He follows and lands on you.\n\n",
+        set_state('gameover')],
+
+    win: [
+        color('blue'),
+        "You hit him. He blows up. Robotnik gets up from behind Metal Sonic's controls.\n",
+        "Robotnik is surprised that you blew up Metal Sonic. He gives up. You get Tails.\n",
+        "Tails is joyful\n\n",
+        color('green'),
+        "THANKS!!\n\n\n",
+        color('cyan'),
+        "Do you want to play again(1) or quit(2) &gt;",
+        query({1: 'start', other: 'done'})],
+};
+
+function in_query() {
+    return Object.keys(querymap).length > 0;
+}
+
+function process_keydown(ev) {
+    if (!in_query()) {
+        return;
+    }
+    var key = ev.which;
+    if (key == 8) {  // backspace
+        user_input = user_input.substring(0, user_input.length - 1);
+        update_user_input(true);
+    }
+    else if (key >= '0'.charCodeAt(0) && key <= '9'.charCodeAt(0)) {
+        user_input += String.fromCharCode(key);
+        update_user_input(true);
+    }
+    else if (key == '\r'.charCodeAt(0)) {
+        var user_answer = parseInt(user_input);
+        var next_state = querymap[user_answer];
+        if (next_state == undefined) {
+            next_state = querymap["other"];
+        }
+        if (next_state == undefined) {
+            throw new Error("no default for query in state " + globalstate);
+        }
+        update_user_input(false);
+        querymap = {};
+        globalstate = next_state;
+        user_input = "";
+        print("\n\n");
+        run_state_series();
+    }
+}
+
+function run_state_series() {
+    while (!in_query()) {
+        run_state_named(globalstate);
+    }
+}
+
+$(document).ready(function () {
+    $(document).keydown(process_keydown);
+    run_state_series();
+});
+
+</script>
+</body>
+</html>
